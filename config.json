@@ -1,0 +1,21 @@
+{
+  "store_name": "DEMO RESTAURANT",
+  "base_url": "http://127.0.0.1:8080",
+  "printer_mode": "file",
+  "printer_name": "ZDesigner ZT610-203dpi ZPL",
+  "line_pay_enabled": false,
+  "line_pay_channel_id": "",
+  "line_pay_channel_secret": "",
+  "einvoice_enabled": false,
+  "einvoice_provider": "reserved",
+  "points_per_amount": 100,
+  "line_liff_enabled": false,
+  "line_liff_id": "",
+  "version": "2.3",
+  "admin_password": "admin123",
+  "kitchen_password": "kitchen123",
+  "checkout_password": "checkout123",
+  "secret_key": "CHANGE_ME_RANDOM_SECRET",
+  "print_agent_token": "print-agent-token-change-me",
+  "database_note": "V2.3 keeps SQLite for local test. For Render/Railway production use persistent disk or migrate to PostgreSQL in V2.4."
+}

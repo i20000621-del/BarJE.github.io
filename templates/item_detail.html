@@ -1,0 +1,23 @@
+{% extends 'base_client.html' %}{% block body %}
+<a class="btn gray" href="/order/{{table_no}}">← 返回菜單</a>
+<div class="detail-card">
+  {% if item.image_path %}<img class="detail-img" src="{{item.image_path}}" alt="{{item.name}}">{% endif %}
+  <h2>{{item.name}}</h2>
+  <div class="total">NT$ {{item.price}}</div>
+  {% if item.description %}<p>{{item.description}}</p>{% endif %}
+  <form method="post" action="/order/{{table_no}}/cart/add">
+    <input type="hidden" name="item_id" value="{{item.id}}">
+    <label>數量</label><br>
+    <input type="number" name="qty" value="1" min="1" class="qty"><br><br>
+    {% for g in groups %}
+      <label>{{g.name}}</label><br>
+      <select name="opt_{{g.name}}" required>
+        {% for o in g.options %}<option value="{{o}}">{{o}}</option>{% endfor %}
+      </select><br><br>
+    {% endfor %}
+    <label>備註</label><br>
+    <input name="note" placeholder="例如：不要蔥、醬另外放"><br><br>
+    <button class="btn green" type="submit">加入購物車</button>
+  </form>
+</div>
+{% endblock %}

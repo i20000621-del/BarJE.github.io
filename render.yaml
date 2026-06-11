@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: qr-pos-order
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ADMIN_PASSWORD
+        value: admin123
+      - key: KITCHEN_PASSWORD
+        value: kitchen123
+      - key: CHECKOUT_PASSWORD
+        value: checkout123
+      - key: PRINT_AGENT_TOKEN
+        generateValue: true

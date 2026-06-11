@@ -1,0 +1,6 @@
+{% extends 'base_checkout.html' %}{% block body %}
+<h2>點數兌換核銷</h2>
+<form class="card" method="get" action="/redeem-scan"><h3>掃描或輸入兌換碼</h3><input name="code" value="{{code}}" placeholder="RD..." autofocus><button class="btn">查詢</button></form>
+{% if code and not redemption %}<div class="warnbox">查無此兌換碼。</div>{% endif %}
+{% if redemption %}<div class="card"><h3>{{redemption.reward_name}}</h3><p>會員：{{redemption.display_name}}｜電話：{{redemption.phone}}</p><p>扣點：{{redemption.points_cost}}｜折抵：NT$ {{redemption.discount_amount}}</p><p>狀態：<b>{{redemption.status}}</b></p><p>建立時間：{{redemption.created_at}}</p>{% if redemption.status == 'unused' %}<form method="post" action="/redeem-scan/use"><input type="hidden" name="code" value="{{redemption.code}}"><button class="btn green">確認核銷</button></form>{% else %}<div class="okbox">此券已核銷，請勿重複使用。</div>{% endif %}</div>{% endif %}
+{% endblock %}

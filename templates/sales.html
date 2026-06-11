@@ -1,0 +1,55 @@
+{% extends 'base_admin.html' %}{% block body %}
+<h2>每日銷售統計 / 銷售紀錄</h2>
+<form class="card" method="get" action="/sales">
+  統計日期 <input type="date" name="date" value="{{target_date}}">
+  <button class="btn">查詢</button>
+</form>
+
+<div class="card">
+  <h3>{{target_date}} 菜品銷售統計</h3>
+  <p class="muted">此表依「已結帳」訂單統計，給備餐用。未結帳訂單不納入。</p>
+  <p class="total-small">總銷售數量：{{total_qty}}　總金額：NT$ {{total_amount}}</p>
+  {% if stats %}
+  <div class="chart-wrap"><canvas id="salesChart" height="280"></canvas></div>
+  <table>
+    <tr><th>排名</th><th>菜品</th><th>今日銷售量</th><th>銷售金額</th></tr>
+    {% for s in stats %}
+    <tr><td>{{loop.index}}</td><td>{{s.name}}</td><td>{{s.qty}}</td><td>NT$ {{s.amount}}</td></tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p>此日期目前沒有已結帳銷售資料。</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h3>{{target_date}} 結帳紀錄</h3>
+  <table><tr><th>訂單</th><th>桌號</th><th>付款</th><th>載具</th><th>統編</th><th>金額</th><th>結帳時間</th></tr>{% for o in orders %}<tr><td>#{{o.id}}</td><td>{{o.table_no}}</td><td>{{o.payment_method}}</td><td>{{o.carrier}}</td><td>{{o.tax_id}}</td><td>{{o.total}}</td><td>{{o.paid_at}}</td></tr>{% endfor %}</table>
+</div>
+
+<script>
+const labels = {{ stats | map(attribute='name') | list | tojson }};
+const values = {{ stats | map(attribute='qty') | list | tojson }};
+const canvas = document.getElementById('salesChart');
+if (canvas && labels.length) {
+  const ctx = canvas.getContext('2d');
+  const width = canvas.clientWidth || 800;
+  const height = canvas.height;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
+  ctx.scale(dpr, dpr);
+  const max = Math.max(...values, 1);
+  const left = 120, right = 20, top = 20, rowH = Math.max(30, Math.min(46, (height - top - 20) / labels.length));
+  ctx.font = '14px Microsoft JhengHei, Arial';
+  ctx.textBaseline = 'middle';
+  labels.forEach((label, i) => {
+    const y = top + i * rowH + rowH / 2;
+    const barW = (width - left - right - 50) * (values[i] / max);
+    ctx.fillText(label.length > 10 ? label.slice(0, 10) + '…' : label, 8, y);
+    ctx.fillRect(left, y - 10, barW, 20);
+    ctx.fillText(String(values[i]), left + barW + 8, y);
+  });
+}
+</script>
+{% endblock %}

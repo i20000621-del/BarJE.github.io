@@ -1,0 +1,5 @@
+{% extends 'base_admin.html' %}{% block body %}
+<h2>串接設定 / V2.0 預留</h2>
+<div class="card"><h3>目前測試設定</h3><table><tr><th>項目</th><th>目前值</th></tr>{% for k,v in config.items() %}<tr><td>{{k}}</td><td>{{v}}</td></tr>{% endfor %}</table></div>
+<div class="card"><h3>正式上線需填入</h3><ul><li>LINE Login Channel ID / Secret</li><li>LIFF ID</li><li>Messaging API Channel Access Token</li><li>LINE Pay Channel ID / Secret</li><li>電子發票服務商 API Key</li><li>正式網域 HTTPS URL</li></ul><p class="muted">目前版本為本機測試，LINE Pay 與電子發票以欄位和流程預留為主。</p></div>
+{% endblock %}

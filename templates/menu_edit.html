@@ -1,0 +1,13 @@
+{% extends 'base_admin.html' %}{% block body %}
+<h2>編輯品項</h2>
+<form class="card" method="post" action="/admin/menu/{{item.id}}/edit" enctype="multipart/form-data">
+  分類 <input name="category" value="{{item.category}}" required><br><br>
+  品名 <input name="name" value="{{item.name}}" required><br><br>
+  價格 <input name="price" type="number" value="{{item.price}}" required><br><br>
+  {% if item.image_path %}<img class="admin-preview" src="{{item.image_path}}"><br>{% endif %}
+  更換圖片 <input name="image" type="file" accept="image/*"><br><br>
+  詳細說明<br><textarea name="description">{{item.description}}</textarea><br><br>
+  客製化選項<br><textarea name="option_groups" placeholder="支援 = 或 :，一行一組&#10;辣度=不辣,小辣,中辣,大辣&#10;冰量:正常冰/少冰/去冰">{{item.option_groups}}</textarea><br><br>
+  <button class="btn green">儲存</button> <a class="btn gray" href="/admin/menu">返回</a>
+</form>
+{% endblock %}
