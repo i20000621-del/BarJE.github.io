@@ -1,6 +1,6 @@
 {
   "store_name": "DEMO RESTAURANT",
-  "base_url": "http://127.0.0.1:8080",
+  "base_url": "https://poe-order.onrender.com",
   "printer_mode": "file",
   "printer_name": "ZDesigner ZT610-203dpi ZPL",
   "line_pay_enabled": false,
