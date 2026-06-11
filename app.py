@@ -425,12 +425,9 @@ def table_landing(request: Request, table_no:str):
 
 @app.get('/takeout')
 def takeout_entry(request: Request):
-    cookie = request.cookies.get(takeout_cookie_name(), '')
-    today = today_key()
-    if cookie.startswith(f'T{today}-'):
-        takeout_no = cookie
-    else:
-        takeout_no = next_takeout_no()
+    # 每次進入外帶 QR 入口都重新產生今日外帶號碼，
+    # 避免同一支手機因為舊 Cookie 一直沿用同一個外帶號碼。
+    takeout_no = next_takeout_no()
     resp = RedirectResponse(f'/order/{takeout_no}', status_code=303)
     resp.set_cookie(takeout_cookie_name(), takeout_no, httponly=True, samesite='lax', secure=False, max_age=60*60*12, path='/')
     return resp
@@ -538,7 +535,10 @@ def submit_order(table_no:str, item_ids: list[int] = Form(default=[]), qtys: lis
         if not is_takeout_no(table_no):
             c.execute("update tables set status='dining' where table_no=?", (table_no,))
         c.commit()
-    return RedirectResponse(f'/order/{table_no}/done?order_id={oid}', status_code=303)
+    resp = RedirectResponse(f'/order/{table_no}/done?order_id={oid}', status_code=303)
+    if is_takeout_no(table_no):
+        resp.delete_cookie(takeout_cookie_name(), path='/')
+    return resp
 
 @app.post('/order/{table_no}/item/{item_id}/submit')
 async def submit_item_detail(request: Request, table_no:str, item_id:int, qty:int=Form(1), note:str=Form('')):
@@ -592,11 +592,16 @@ def cart_submit(request: Request, table_no: str):
         c.commit()
     resp = RedirectResponse(f'/order/{table_no}/done?order_id={oid}', status_code=303)
     resp.delete_cookie(cart_cookie_name(table_no), path='/')
+    if is_takeout_no(table_no):
+        resp.delete_cookie(takeout_cookie_name(), path='/')
     return resp
 
 @app.get('/order/{table_no}/done', response_class=HTMLResponse)
 def order_done(request:Request, table_no:str, order_id:int):
-    return templates.TemplateResponse(request, 'done.html', {'table_no':table_no,'order_id':order_id})
+    response = templates.TemplateResponse(request, 'done.html', {'table_no':table_no,'order_id':order_id})
+    if is_takeout_no(table_no):
+        response.delete_cookie(takeout_cookie_name(), path='/')
+    return response
 
 @app.get('/kitchen', response_class=HTMLResponse)
 def kitchen(request:Request):
