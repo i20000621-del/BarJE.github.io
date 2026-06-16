@@ -1,0 +1,13 @@
+{% extends 'base_client.html' %}{% block body %}
+<div class="card center">
+  <h2>餐點已送出</h2>
+  {% if table_no[:1] == 'T' %}
+    <p>外帶號碼：{{table_no}}</p>
+    <p>請等待叫號取餐。</p>
+  {% else %}
+    <p>桌號：{{table_no}}</p>
+  {% endif %}
+  <p>您的餐點已送到後廚，請稍候。</p>
+  <a class="btn" href="/order/{{table_no}}">繼續加點</a>
+</div>
+{% endblock %}

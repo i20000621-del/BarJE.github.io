@@ -1,0 +1,18 @@
+{% extends 'base_admin.html' %}{% block body %}
+<h2>菜單管理</h2>
+<form class="card" method="post" action="/admin/menu/add" enctype="multipart/form-data">
+  <div class="form-row">分類 <input name="category" required> 品名 <input name="name" required> 價格 <input name="price" type="number" required></div><br>
+  <div>圖片 <input name="image" type="file" accept="image/*"></div><br>
+  <div>詳細說明<br><textarea name="description" placeholder="例如：附白飯與小菜"></textarea></div><br>
+  <div>客製化選項<br>
+    <textarea name="option_groups" placeholder="一行一組，支援 = 或 :&#10;辣度=不辣,小辣,中辣,大辣&#10;冰量:正常冰/少冰/去冰"></textarea>
+  </div><br>
+  <button class="btn">新增</button>
+</form>
+<table><tr><th>圖</th><th>ID</th><th>分類</th><th>品名</th><th>價格</th><th>上架</th><th>操作</th></tr>
+{% for i in items %}<tr>
+<td>{% if i.image_path %}<img class="thumb" src="{{i.image_path}}">{% endif %}</td>
+<td>{{i.id}}</td><td>{{i.category}}</td><td>{{i.name}}</td><td>{{i.price}}</td><td>{{'是' if i.enabled else '否'}}</td>
+<td><a class="btn" href="/admin/menu/{{i.id}}/edit">編輯</a> <form class="inline" method="post" action="/admin/menu/{{i.id}}/toggle"><button class="btn gray">切換上架</button></form></td>
+</tr>{% endfor %}</table>
+{% endblock %}

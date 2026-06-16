@@ -1,0 +1,19 @@
+{% extends 'base_kitchen.html' %}{% block body %}
+<h2>KDS 廚房看板</h2><p><a class="btn gray" href="/kds">重新整理</a></p>
+<div class="kds-grid">
+  {% for key, title in [('new','待製作'),('accepted','製作中'),('done','已完成')] %}
+  <div class="kds-col"><h3>{{title}}</h3>
+    {% for i in groups[key] %}
+    <div class="ticket status-{{key}}">
+      <div class="ticket-head">{% if i.table_no[:1] == 'T' %}外帶號碼 {{i.table_no}}{% else %}桌號 {{i.table_no}}{% endif %}</div>
+      <div class="ticket-item">{{i.name}} × {{i.qty}}</div>
+      <div class="muted">{{i.options}} {% if i.options and i.note %} / {% endif %} {{i.note}}</div>
+      <div class="muted">{{i.created_at}}</div>
+      <form class="inline" method="post" action="/kitchen/item/{{i.id}}/accepted"><button class="btn">接單</button></form>
+      <form class="inline" method="post" action="/kitchen/item/{{i.id}}/done"><button class="btn green">完成</button></form>
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+</div><script>setTimeout(()=>location.reload(),5000)</script>
+{% endblock %}

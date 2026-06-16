@@ -1,0 +1,12 @@
+{% extends 'base_client.html' %}{% block body %}
+<div class="landing">
+  <h1>歡迎光臨</h1>
+  <h2>桌號 {{table_no}}</h2>
+  <p class="muted">正式版可在這裡接 LINE LIFF 登入，取得會員 userId 後自動集點。</p>
+  <div class="card actions">
+    <a class="btn line" href="/members">LINE會員登入 / 綁定測試</a>
+    <a class="btn green" href="/order/{{table_no}}">直接開始點餐</a>
+  </div>
+  <div class="card"><h3>目前優惠</h3><p>消費滿 NT$ {{config.points_per_amount}} 可得 1 點。</p></div>
+</div>
+{% endblock %}

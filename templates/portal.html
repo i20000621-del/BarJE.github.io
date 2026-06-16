@@ -1,0 +1,10 @@
+{% extends 'base_admin.html' %}{% block body %}
+<h2>QR POS Order V2.2 系統入口</h2>
+<p class="muted">正式使用時，客人只會掃桌號 QR 進入客戶端；後廚、結帳、後台使用獨立網址。</p>
+<div class="grid">
+  <div class="card"><h3>客戶端</h3><p>給客人掃 QR 點餐，不顯示後台功能。</p><a class="btn green" href="/t/A01">測試 A01 客戶端</a></div>
+  <div class="card"><h3>後廚端</h3><p>接單、KDS 看板、列印狀態。</p><a class="btn" href="/kds">進入後廚端</a></div>
+  <div class="card"><h3>結帳端</h3><p>桌號結帳、載具、LINE Pay 預留、兌換核銷。</p><a class="btn dark" href="/checkout">進入結帳端</a></div>
+  <div class="card"><h3>後台</h3><p>菜單、桌號 QR、銷售報表、備料分析、串接設定。</p><a class="btn gray" href="/admin/tables">進入後台</a></div>
+</div>
+{% endblock %}

@@ -1,0 +1,67 @@
+{% extends 'base_admin.html' %}
+{% block body %}
+<h2>桌號管理 / 桌號 QR Code / 客人入口</h2>
+<p class="muted">可新增、編輯、刪除桌號。QR Code 會依 config.json 的 base_url 產生。</p>
+
+{% if error %}<div class="alert danger">{{ error }}</div>{% endif %}
+{% if message %}<div class="alert ok">{{ message }}</div>{% endif %}
+
+<div class="card">
+  <h3>新增桌號</h3>
+  <form method="post" action="/admin/tables/add" class="inline-form">
+    <label>桌號</label>
+    <input name="table_no" placeholder="A01" required>
+    <label>人數</label>
+    <input name="capacity" type="number" min="1" value="4">
+    <label>區域</label>
+    <input name="area" placeholder="1F / 包廂 / 外帶區">
+    <button class="btn" type="submit">新增</button>
+  </form>
+</div>
+
+
+<div class="card">
+  <h3>外帶 QR Code</h3>
+  <p class="muted">客人掃描後會自動取得今日外帶號碼；每天從 001 重新開始。</p>
+  <img src="https://quickchart.io/qr?text={{ config.base_url.rstrip('/') }}/takeout&size=200" width="140">
+  <p>入口：{{ config.base_url.rstrip('/') }}/takeout</p>
+  <a class="btn" href="/takeout">測試外帶入口</a>
+</div>
+
+<div class="grid">
+  {% for t in tables %}
+  <div class="card">
+    <h3>{{ t.table_no }}</h3>
+    <img src="https://quickchart.io/qr?text={{ config.base_url.rstrip('/') }}/t/{{ t.table_no }}&size=200" width="140">
+    <p>狀態：{{ t.status }}</p>
+    <p>人數：{{ t.capacity if t.capacity else 4 }}</p>
+    <p>區域：{{ t.area or '-' }}</p>
+    <a class="btn" href="/t/{{ t.table_no }}">測試客人入口</a>
+
+    <hr>
+    <form method="post" action="/admin/tables/update" class="stack-form">
+      <input type="hidden" name="old_table_no" value="{{ t.table_no }}">
+      <label>桌號</label>
+      <input name="table_no" value="{{ t.table_no }}" required>
+      <label>人數</label>
+      <input name="capacity" type="number" min="1" value="{{ t.capacity if t.capacity else 4 }}">
+      <label>區域</label>
+      <input name="area" value="{{ t.area or '' }}">
+      <label>狀態</label>
+      <select name="status">
+        <option value="empty" {% if t.status == 'empty' %}selected{% endif %}>空桌</option>
+        <option value="occupied" {% if t.status == 'occupied' %}selected{% endif %}>用餐中</option>
+        <option value="reserved" {% if t.status == 'reserved' %}selected{% endif %}>已預約</option>
+        <option value="disabled" {% if t.status == 'disabled' %}selected{% endif %}>停用</option>
+      </select>
+      <button class="btn" type="submit">儲存修改</button>
+    </form>
+
+    <form method="post" action="/admin/tables/delete" onsubmit="return confirm('確定刪除桌號 {{ t.table_no }}？');">
+      <input type="hidden" name="table_no" value="{{ t.table_no }}">
+      <button class="btn danger-btn" type="submit">刪除桌號</button>
+    </form>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

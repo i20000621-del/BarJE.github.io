@@ -1,0 +1,18 @@
+{% extends 'base_client.html' %}{% block body %}
+<h2>{% if table_no[:1] == 'T' %}外帶 {{table_no}} 點餐{% else %}桌號 {{table_no}} 點餐{% endif %}</h2>{% if member %}<div class="okbox">LINE會員：{{member.display_name}}｜目前點數：{{member.total_points}}</div>{% endif %}
+<p class="muted">點選品項可進入詳細頁，選擇辣度、冰量等客製化選項。</p>
+{% for cat in cats %}
+<h3>{{cat}}</h3>
+<div class="menu-grid">
+{% for i in items if i.category == cat %}
+  <a class="menu-card" href="/order/{{table_no}}/item/{{i.id}}">
+    {% if i.image_path %}<img src="{{i.image_path}}" alt="{{i.name}}">{% else %}<div class="no-img">No Image</div>{% endif %}
+    <div class="menu-name">{{i.name}}</div>
+    <div class="menu-price">NT$ {{i.price}}</div>
+    {% if i.description %}<div class="menu-desc">{{i.description}}</div>{% endif %}
+  </a>
+{% endfor %}
+</div>
+{% endfor %}
+<a class="cart-bar" href="/order/{{table_no}}/cart"><span>🛒 購物車{% if cart_count %}（{{cart_count}}）{% endif %}</span><b>總價：NT$ {{cart_total or 0}}</b></a>
+{% endblock %}

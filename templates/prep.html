@@ -1,0 +1,6 @@
+{% extends 'base_admin.html' %}{% block body %}
+<h2>每日備料分析</h2>
+<form class="card" method="get" action="/prep">日期 <input type="date" name="date" value="{{target_date}}"><button class="btn">查詢</button></form>
+<div class="card"><h3>{{target_date}} 菜品銷售量</h3><table><tr><th>菜品</th><th>數量</th></tr>{% for s in menu_stats %}<tr><td>{{s.name}}</td><td>{{s.qty}}</td></tr>{% endfor %}</table>{% if not menu_stats %}<p>目前無已結帳資料。</p>{% endif %}</div>
+<div class="card"><h3>備料預估</h3><p class="muted">依「備料設定」中的每份用量計算。</p><table><tr><th>原料</th><th>預估用量</th><th>單位</th></tr>{% for s in ingredient_stats %}<tr><td>{{s.ingredient_name}}</td><td>{{'%.2f'|format(s.qty)}}</td><td>{{s.unit}}</td></tr>{% endfor %}</table>{% if not ingredient_stats %}<p>尚未設定原料對應，請到「備料設定」新增。</p>{% endif %}</div>
+{% endblock %}

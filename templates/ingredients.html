@@ -1,0 +1,5 @@
+{% extends 'base_admin.html' %}{% block body %}
+<h2>備料設定</h2>
+<form class="card" method="post" action="/admin/ingredients/add"><h3>新增菜品原料對應</h3><select name="menu_item_id">{% for i in items %}<option value="{{i.id}}">{{i.category}}｜{{i.name}}</option>{% endfor %}</select><input name="ingredient_name" placeholder="原料名稱，例如 雞腿" required><input name="qty_per_item" type="number" step="0.01" value="1"><input name="unit" value="份"><button class="btn green">新增</button></form>
+<div class="card"><table><tr><th>菜品</th><th>原料</th><th>每份用量</th><th>單位</th><th>操作</th></tr>{% for ing in ingredients %}<tr><td>{{ing.menu_name}}</td><td>{{ing.ingredient_name}}</td><td>{{ing.qty_per_item}}</td><td>{{ing.unit}}</td><td><form class="inline" method="post" action="/admin/ingredients/{{ing.id}}/delete"><button class="btn gray">刪除</button></form></td></tr>{% endfor %}</table></div>
+{% endblock %}
