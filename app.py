@@ -66,7 +66,20 @@ def role_allowed(role: str, path: str) -> bool:
 
 @app.middleware('http')
 async def role_guard(request: Request, call_next):
-    # V2.6.2：移除權限控管，後台、後廚、結帳端皆可直接進入。
+    path = request.url.path
+    role = current_role(request)
+
+    # 後台管理頁：僅 admin 可進入
+    if path == '/admin' or path.startswith('/admin/'):
+        if role != 'admin':
+            return RedirectResponse(f'/login?role=admin&next={path}', status_code=303)
+
+    # 結帳端：admin 或 checkout 可進入
+    if path == '/checkout' or path.startswith('/checkout/'):
+        if role not in ('admin', 'checkout'):
+            return RedirectResponse(f'/login?role=checkout&next={path}', status_code=303)
+
+    # 客人點餐、後廚/KDS、靜態檔與 API 維持原本方式
     return await call_next(request)
 
 @app.get('/healthz')
@@ -74,8 +87,8 @@ def healthz():
     return {'ok': True, 'version': '2.6.2-noauth'}
 
 @app.get('/login', response_class=HTMLResponse)
-def login_page(request: Request, next: str = '/'):
-    return templates.TemplateResponse(request, 'login.html', {'roles': ROLE_LABELS, 'next': next, 'error': ''})
+def login_page(request: Request, next: str = '/', role: str = ''):
+    return templates.TemplateResponse(request, 'login.html', {'roles': ROLE_LABELS, 'next': next, 'error': '', 'selected_role': role})
 
 @app.post('/login')
 def login(role: str = Form(...), password: str = Form(...), next: str = Form('/')):
@@ -929,9 +942,6 @@ def admin_sales_page(request:Request, date: Optional[str] = None):
 def admin_prep_page(request:Request, date: Optional[str]=None):
     return prep_page(request, date)
 
-@app.get('/admin/settings', response_class=HTMLResponse)
-def admin_settings_page(request:Request):
-    return settings_page(request)
 @app.get('/admin/settings', response_class=HTMLResponse)
 def admin_settings_page(request:Request):
     return settings_page(request)
