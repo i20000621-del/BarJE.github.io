@@ -604,16 +604,27 @@ def kitchen_status(item_id:int, status:str):
 def api_print_pending(x_print_token: str = Header(default='')):
     if x_print_token != PRINT_AGENT_TOKEN:
         return JSONResponse({'error':'invalid print token'}, status_code=401)
-    items = rows('''select oi.*, o.table_no, o.created_at from order_items oi join orders o on o.id=oi.order_id
-                    where oi.print_status='pending' order by oi.id asc limit 20''')
-    return {'items': items}
+    # 以 order_id 分組，讓 USB 出單機一次列印一張完整訂單。
+    pending = rows('''select distinct o.id as order_id, o.table_no, o.created_at
+                      from orders o join order_items oi on oi.order_id=o.id
+                      where oi.print_status='pending'
+                      order by o.id asc limit 20''')
+    orders_out = []
+    for o in pending:
+        o['items'] = rows('''select id, name, qty, price, note, options
+                             from order_items
+                             where order_id=? and print_status='pending'
+                             order by id asc''', (o['order_id'],))
+        orders_out.append(o)
+    return {'orders': orders_out}
 
-@app.post('/api/print-marked/{item_id}')
-def api_print_marked(item_id:int, x_print_token: str = Header(default='')):
+@app.post('/api/print-marked/{order_id}')
+def api_print_marked(order_id:int, x_print_token: str = Header(default='')):
     if x_print_token != PRINT_AGENT_TOKEN:
         return JSONResponse({'error':'invalid print token'}, status_code=401)
     with conn() as c:
-        c.execute("update order_items set print_status='printed' where id=?", (item_id,)); c.commit()
+        c.execute("update order_items set print_status='printed' where order_id=? and print_status='pending'", (order_id,))
+        c.commit()
     return {'ok': True}
 
 @app.get('/checkout', response_class=HTMLResponse)
@@ -878,6 +889,9 @@ def admin_sales_page(request:Request, date: Optional[str] = None):
 def admin_prep_page(request:Request, date: Optional[str]=None):
     return prep_page(request, date)
 
+@app.get('/admin/settings', response_class=HTMLResponse)
+def admin_settings_page(request:Request):
+    return settings_page(request)
 @app.get('/admin/settings', response_class=HTMLResponse)
 def admin_settings_page(request:Request):
     return settings_page(request)
