@@ -122,7 +122,7 @@ def login_page(request: Request, next: str = '/', role: str = 'admin'):
 def login(request: Request, role: str = Form(...), password: str = Form(...), next: str = Form('/')):
     if role in ROLE_PASSWORDS and hmac.compare_digest(password, ROLE_PASSWORDS[role]):
         resp = RedirectResponse(next or '/', status_code=303)
-        resp.set_cookie('qrpos_role', sign_value(role), httponly=True, samesite='lax', secure=False, max_age=60*60*12)
+        resp.set_cookie('qrpos_role', sign_value(role), httponly=True, samesite='lax', secure=False)
         return resp
     return templates.TemplateResponse(
         request=request,
@@ -475,7 +475,7 @@ def takeout_entry(request: Request):
     # 每次進入外帶 QR 都產生新的外帶號碼，不沿用舊 cookie。
     takeout_no = next_takeout_no()
     resp = RedirectResponse(f'/order/{takeout_no}', status_code=303)
-    resp.set_cookie(takeout_cookie_name(), takeout_no, httponly=True, samesite='lax', secure=False, max_age=60*60*12, path='/')
+    resp.set_cookie(takeout_cookie_name(), takeout_no, httponly=True, samesite='lax', secure=False, path='/')
     return resp
 
 
