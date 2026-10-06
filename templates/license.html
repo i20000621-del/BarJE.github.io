@@ -1,0 +1,22 @@
+{% extends 'base_client.html' %}
+{% block body %}
+<div class="card" style="max-width:520px;margin:60px auto;">
+  <h2>POS 軟體授權</h2>
+  {% if error %}<div class="alert danger">{{ error }}</div>{% endif %}
+  {% if license and license.valid %}
+    <p>客戶：<b>{{ license.customer_name }}</b></p>
+    <p>方案：{{ license.plan }}</p>
+    <p>到期：{{ license.expires_at }}</p>
+    <a class="btn" href="/">進入 POS</a>
+  {% else %}
+    <p class="muted">目前系統尚未啟用，請輸入供應商提供的授權金鑰。</p>
+    <form method="post" action="/license/activate">
+      <label>授權金鑰</label>
+      <input name="license_key" placeholder="POS-XXXX-XXXX-XXXX"
+             style="width:100%;padding:12px;margin:10px 0 16px;"
+             required autocomplete="off">
+      <button class="btn green" type="submit">啟用授權</button>
+    </form>
+  {% endif %}
+</div>
+{% endblock %}
