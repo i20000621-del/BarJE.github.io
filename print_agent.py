@@ -137,16 +137,32 @@ def render_receipt(order: dict) -> Image.Image:
     d.line((MARGIN, y, PAPER_WIDTH - MARGIN, y), fill=0, width=2)
     y += 18
 
+    total = 0
+
     for item in order.get("items", []):
         name = str(item.get("name") or "")
-        qty = item.get("qty", 1)
+        qty = int(item.get("qty") or 1)
+        try:
+            price = int(float(item.get("price") or 0))
+        except (TypeError, ValueError):
+            price = 0
+        subtotal = price * qty
+        total += subtotal
 
-        # Item name on left, quantity aligned right.
+        # 第一行：品項名稱 + 數量
         qty_text = f"×{qty}"
         d.text((MARGIN, y), name, font=F_BOLD, fill=0)
         qx = PAPER_WIDTH - MARGIN - text_width(d, qty_text, F_BOLD)
         d.text((qx, y), qty_text, font=F_BOLD, fill=0)
         y += 43
+
+        # 第二行：單價與小計
+        price_text = f"單價 ${price}"
+        subtotal_text = f"小計 ${subtotal}"
+        d.text((MARGIN + 18, y), price_text, font=F_SMALL, fill=0)
+        sx = PAPER_WIDTH - MARGIN - text_width(d, subtotal_text, F_SMALL)
+        d.text((sx, y), subtotal_text, font=F_SMALL, fill=0)
+        y += 34
 
         options = item.get("options") or ""
         note = item.get("note") or ""
@@ -165,7 +181,10 @@ def render_receipt(order: dict) -> Image.Image:
 
     d.line((MARGIN, y, PAPER_WIDTH - MARGIN, y), fill=0, width=2)
     y += 18
-    center(d, y, "訂單結束", F_NORMAL)
+
+    total_text = f"合計：${total}"
+    tx = PAPER_WIDTH - MARGIN - text_width(d, total_text, F_BIG)
+    d.text((tx, y), total_text, font=F_BIG, fill=0)
     y += 58
 
     # Extra feed before cutter.
