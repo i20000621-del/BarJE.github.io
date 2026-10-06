@@ -1,4 +1,4 @@
-  from __future__ import annotations
+from __future__ import annotations
 import json, sqlite3, os, hmac, hashlib, base64
 from datetime import datetime
 from zoneinfo import ZoneInfo
