@@ -1,1 +1,21 @@
-<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{{ title or '結帳端' }}</title><link rel="stylesheet" href="/static/style.css"></head><body><div class="top checkout-top"><b>結帳端</b><a href="/checkout">桌號結帳</a><a href="/redeem-scan">兌換核銷</a><a href="/members">會員查詢</a></div><div class="wrap wide-wrap">{% block body %}{% endblock %}</div></body></html>
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{ title or '結帳端' }}</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="top checkout-top">
+  <b>結帳端</b>
+  <a href="/checkout">桌號結帳</a>
+  <a href="/redeem-scan">兌換核銷</a>
+  <a href="/members">會員查詢</a>
+  <a href="/">← 返回主頁</a>
+</div>
+<div class="wrap wide-wrap">
+{% block body %}{% endblock %}
+</div>
+</body>
+</html>
