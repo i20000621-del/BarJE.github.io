@@ -9,10 +9,28 @@
   </div><br>
   <button class="btn">新增</button>
 </form>
-<table><tr><th>圖</th><th>ID</th><th>分類</th><th>品名</th><th>價格</th><th>上架</th><th>操作</th></tr>
-{% for i in items %}<tr>
+
+<table>
+<tr><th>圖</th><th>ID</th><th>分類</th><th>品名</th><th>價格</th><th>上架</th><th>操作</th></tr>
+{% for i in items %}
+<tr>
 <td>{% if i.image_path %}<img class="thumb" src="{{i.image_path}}">{% endif %}</td>
-<td>{{i.id}}</td><td>{{i.category}}</td><td>{{i.name}}</td><td>{{i.price}}</td><td>{{'是' if i.enabled else '否'}}</td>
-<td><a class="btn" href="/admin/menu/{{i.id}}/edit">編輯</a> <form class="inline" method="post" action="/admin/menu/{{i.id}}/toggle"><button class="btn gray">切換上架</button></form></td>
-</tr>{% endfor %}</table>
+<td>{{i.id}}</td>
+<td>{{i.category}}</td>
+<td>{{i.name}}</td>
+<td>{{i.price}}</td>
+<td>{{'是' if i.enabled else '否'}}</td>
+<td>
+  <a class="btn" href="/admin/menu/{{i.id}}/edit">編輯</a>
+  <form class="inline" method="post" action="/admin/menu/{{i.id}}/toggle">
+    <button class="btn gray" type="submit">切換上架</button>
+  </form>
+  <form class="inline" method="post" action="/admin/menu/{{i.id}}/delete"
+        onsubmit="return confirm('確定要刪除「{{ i.name }}」嗎？\n刪除後無法復原，但歷史訂單與銷售紀錄會保留。');">
+    <button class="btn" type="submit" style="background:#b42318;">刪除</button>
+  </form>
+</td>
+</tr>
+{% endfor %}
+</table>
 {% endblock %}
