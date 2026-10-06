@@ -436,25 +436,6 @@ def add_table(table_no: str = Form(...), capacity: int = Form(4), area: str = Fo
         c.commit()
     return RedirectResponse('/admin/tables?message=桌號已新增', status_code=303)
 
-@app.post('/admin/tables/{table_no}/open')
-def open_table(table_no: str):
-    table_no = (table_no or '').strip().upper()
-    with conn() as c:
-        c.execute("update tables set status='dining' where table_no=?", (table_no,))
-        c.commit()
-    return RedirectResponse('/admin/tables?message=已開桌', status_code=303)
-
-@app.post('/admin/tables/{table_no}/close')
-def close_table(table_no: str):
-    table_no = (table_no or '').strip().upper()
-    with conn() as c:
-        active = c.execute("select count(*) from orders where table_no=? and payment_status='unpaid'", (table_no,)).fetchone()[0]
-        if active:
-            return RedirectResponse('/admin/tables?error=此桌仍有未結帳訂單，不能關桌', status_code=303)
-        c.execute("update tables set status='empty' where table_no=?", (table_no,))
-        c.commit()
-    return RedirectResponse('/admin/tables?message=已關桌', status_code=303)
-
 @app.post('/admin/tables/update')
 def update_table(old_table_no: str = Form(...), table_no: str = Form(...), capacity: int = Form(4), area: str = Form(''), status: str = Form('empty')):
     old_table_no = (old_table_no or '').strip().upper()
@@ -487,13 +468,6 @@ def delete_table(table_no: str = Form(...)):
 
 @app.get('/t/{table_no}', response_class=HTMLResponse)
 def table_landing(request: Request, table_no:str):
-    if not is_takeout_no(table_no):
-        table = one('select * from tables where table_no=?', (table_no,))
-        if not table or table.get('status') != 'dining':
-            return templates.TemplateResponse(
-                request, 'table_closed.html',
-                {'table_no':table_no,'config':CONFIG}
-            )
     return templates.TemplateResponse(request, 'landing.html', {'table_no':table_no,'config':CONFIG})
 
 @app.get('/takeout')
@@ -576,13 +550,6 @@ def order_page_member(request: Request, table_no:str, member_id:int):
 
 @app.get('/order/{table_no}', response_class=HTMLResponse)
 def order_page(request: Request, table_no:str):
-    if not is_takeout_no(table_no):
-        table = one('select * from tables where table_no=?', (table_no,))
-        if not table or table.get('status') != 'dining':
-            return templates.TemplateResponse(
-                request, 'table_closed.html',
-                {'table_no':table_no,'config':CONFIG}
-            )
     items = rows('select * from menu_items where enabled=1 order by category,id')
     cats = sorted(set(i['category'] for i in items))
     cart_total, cart_count = cart_summary(load_cart(request, table_no))
@@ -695,7 +662,7 @@ def api_print_pending(x_print_token: str = Header(default='')):
     # 以 order_id 分組，讓 USB 出單機一次列印一張完整訂單。
     pending = rows('''select distinct o.id as order_id, o.table_no, o.created_at
                       from orders o join order_items oi on oi.order_id=o.id
-                      where oi.print_status='pending'
+                      where oi.print_status='pending' and o.payment_status='paid'
                       order by o.id asc limit 20''')
     orders_out = []
     for o in pending:
