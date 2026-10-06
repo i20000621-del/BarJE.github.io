@@ -763,6 +763,16 @@ def menu_toggle(item_id:int):
         c.execute('update menu_items set enabled=case enabled when 1 then 0 else 1 end where id=?',(item_id,)); c.commit()
     return RedirectResponse('/admin/menu', status_code=303)
 
+@app.post('/admin/menu/{item_id}/delete')
+def menu_delete(item_id:int):
+    # 只刪除菜單主檔；order_items 保留品名、數量、價格，因此歷史銷售紀錄不受影響。
+    with conn() as c:
+        c.execute('delete from ingredients where menu_item_id=?', (item_id,))
+        c.execute('delete from menu_items where id=?', (item_id,))
+        c.commit()
+    return RedirectResponse('/admin/menu', status_code=303)
+
+
 @app.get('/admin/menu/{item_id}/edit', response_class=HTMLResponse)
 def menu_edit(request:Request, item_id:int):
     item = one('select * from menu_items where id=?', (item_id,))
