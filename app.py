@@ -64,8 +64,90 @@ def role_allowed(role: str, path: str) -> bool:
         return path.startswith('/checkout') or path.startswith('/redeem-scan')
     return False
 
+
+# ===== POS cloud license =====
+LICENSE_SERVER_URL = os.getenv("LICENSE_SERVER_URL", "").rstrip("/")
+LICENSE_FILE = Path(os.getenv("LICENSE_FILE", "pos_license.json"))
+
+def load_local_license():
+    try:
+        if LICENSE_FILE.exists():
+            return json.loads(LICENSE_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        pass
+    return {}
+
+def save_local_license(data):
+    LICENSE_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+def license_api(path, license_key):
+    if not LICENSE_SERVER_URL:
+        return {"valid": False, "reason": "server_not_configured"}
+    req = urllib.request.Request(
+        LICENSE_SERVER_URL + path,
+        data=json.dumps({"license_key": license_key}).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as r:
+            return json.loads(r.read().decode("utf-8"))
+    except Exception:
+        return {"valid": False, "reason": "server_unreachable"}
+
+def license_status():
+    local = load_local_license()
+    key = (local.get("license_key") or "").strip()
+    if not key:
+        return {"valid": False, "reason": "not_activated"}
+    result = license_api("/api/v1/verify", key)
+    if result.get("valid"):
+        result["license_key"] = key
+        save_local_license({**local, **result})
+        return result
+    return result
+
+@app.get('/license', response_class=HTMLResponse)
+def license_page(request: Request):
+    local = load_local_license()
+    return templates.TemplateResponse(
+        request, 'license.html',
+        {'config': CONFIG, 'license': local, 'error': None}
+    )
+
+@app.post('/license/activate', response_class=HTMLResponse)
+def license_activate(request: Request, license_key: str = Form(...)):
+    key = license_key.strip().upper()
+    result = license_api("/api/v1/activate", key)
+    if result.get("valid"):
+        save_local_license({"license_key": key, **result})
+        return RedirectResponse('/', status_code=303)
+    messages = {
+        "invalid_key": "授權金鑰不存在。",
+        "disabled": "此授權已被停用。",
+        "expired": "此授權已到期。",
+        "server_unreachable": "目前無法連線授權伺服器。",
+        "server_not_configured": "尚未設定 LICENSE_SERVER_URL。",
+    }
+    return templates.TemplateResponse(
+        request, 'license.html',
+        {'config': CONFIG, 'license': load_local_license(),
+         'error': messages.get(result.get("reason"), "授權驗證失敗。")},
+        status_code=400
+    )
+
 @app.middleware('http')
 async def role_guard(request: Request, call_next):
+    path = request.url.path
+    license_public = (
+        path.startswith('/license') or
+        path.startswith('/static/') or
+        path == '/healthz'
+    )
+    if not license_public:
+        status = license_status()
+        if not status.get('valid'):
+            return RedirectResponse('/license', status_code=303)
     path = request.url.path
     role = current_role(request)
 
