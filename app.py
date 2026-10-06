@@ -1,6 +1,7 @@
 from __future__ import annotations
 import json, sqlite3, os, hmac, hashlib, base64
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from pathlib import Path
 from typing import Optional
 
@@ -95,11 +96,13 @@ def conn():
     c.row_factory = sqlite3.Row
     return c
 
+TAIPEI_TZ = ZoneInfo("Asia/Taipei")
+
 def now_str():
-    return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    return datetime.now(TAIPEI_TZ).strftime('%Y-%m-%d %H:%M:%S')
 
 def today_key():
-    return datetime.now().strftime('%Y%m%d')
+    return datetime.now(TAIPEI_TZ).strftime('%Y%m%d')
 
 def takeout_cookie_name():
     return 'qrpos_takeout_no'
