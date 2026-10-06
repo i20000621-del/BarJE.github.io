@@ -4,9 +4,10 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 from pathlib import Path
 from typing import Optional
+from io import BytesIO
 
 from fastapi import FastAPI, Form, Request, UploadFile, File, Header
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, PlainTextResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, PlainTextResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -650,6 +651,8 @@ def checkout_table(request:Request, table_no:str, member_query: str = ''):
 
 @app.post('/checkout/{table_no}/pay')
 def pay(table_no:str, payment_method:str=Form(...), carrier:str=Form(''), tax_id:str=Form(''), donate_code:str=Form(''), member_id: str=Form(''), reward_id: str=Form('')):
+    if payment_method == 'LINE Pay':
+        payment_method = '現金'
     with conn() as c:
         unpaid = c.execute("select id from orders where table_no=? and payment_status='unpaid'", (table_no,)).fetchall()
         if not unpaid:
@@ -677,7 +680,7 @@ def pay(table_no:str, payment_method:str=Form(...), carrier:str=Form(''), tax_id
         now = now_str()
         for r in unpaid:
             invoice_no = '' if not CONFIG.get('einvoice_enabled') else 'API_RESERVED'
-            txn_id = 'LINEPAY_SIMULATED' if payment_method == 'LINE Pay' else ''
+            txn_id = ''
             c.execute('''update orders set payment_status='paid', status='closed', payment_method=?, carrier=?, tax_id=?, donate_code=?, paid_at=?, linepay_txn_id=?, invoice_no=?, member_id=?, points_earned=?, points_used=?, discount_amount=? where id=?''',
                       (payment_method, carrier, tax_id, donate_code, now, txn_id, invoice_no, member['id'] if member else None, earned if r['id'] == unpaid[0]['id'] else 0, points_used if r['id'] == unpaid[0]['id'] else 0, discount if r['id'] == unpaid[0]['id'] else 0, r['id']))
         if member and earned:
@@ -857,7 +860,7 @@ def settings_page(request:Request):
     return templates.TemplateResponse(request, 'settings.html', {'config':CONFIG})
 
 @app.get('/sales', response_class=HTMLResponse)
-def sales(request:Request, date: Optional[str] = None):
+def sales(request:Request, date: Optional[str] = None, message: str = '', error: str = ''):
     target_date = date or datetime.now().strftime('%Y-%m-%d')
     paid = rows("select * from orders where payment_status='paid' and substr(paid_at,1,10)=? order by paid_at desc", (target_date,))
     for o in paid:
@@ -872,8 +875,42 @@ def sales(request:Request, date: Optional[str] = None):
     ''', (target_date,))
     total_qty = sum(int(s['qty'] or 0) for s in stats)
     total_amount = sum(int(s['amount'] or 0) for s in stats)
-    return templates.TemplateResponse(request, 'sales.html', {'orders':paid,'stats':stats,'target_date':target_date,'total_qty':total_qty,'total_amount':total_amount})
+    return templates.TemplateResponse(request, 'sales.html', {'orders':paid,'stats':stats,'target_date':target_date,'total_qty':total_qty,'total_amount':total_amount,'message':message,'error':error})
 
+
+
+def build_sales_excel(target_date: str):
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, Alignment
+    from openpyxl.utils import get_column_letter
+    paid=rows("select * from orders where payment_status='paid' and substr(paid_at,1,10)=? order by paid_at asc",(target_date,))
+    for o in paid: o['total']=order_total(o['id'])
+    stats=rows("""select oi.name name,sum(oi.qty) qty,sum(oi.qty*oi.price) amount
+      from order_items oi join orders o on o.id=oi.order_id
+      where o.payment_status='paid' and substr(o.paid_at,1,10)=?
+      group by oi.name order by qty desc,amount desc,name asc""",(target_date,))
+    wb=Workbook(); ws=wb.active; ws.title="菜品銷售統計"
+    ws.append([f"{target_date} 菜品銷售統計"]); ws.append(["排名","菜品","銷售數量","銷售金額"])
+    for n,x in enumerate(stats,1): ws.append([n,x["name"],int(x["qty"] or 0),int(x["amount"] or 0)])
+    ws.append([]); ws.append(["","合計",sum(int(x["qty"] or 0) for x in stats),sum(int(x["amount"] or 0) for x in stats)])
+    ws2=wb.create_sheet("結帳紀錄"); ws2.append([f"{target_date} 結帳紀錄"])
+    ws2.append(["訂單","桌號/外帶號碼","付款方式","載具","統編","金額","結帳時間"])
+    for o in paid: ws2.append([f"#{o['id']}",o.get("table_no",""),o.get("payment_method",""),o.get("carrier",""),o.get("tax_id",""),int(o.get("total") or 0),o.get("paid_at","")])
+    for sh in (ws,ws2):
+        sh.freeze_panes="A3"
+        for c in sh[1]: c.font=Font(bold=True,size=14)
+        for c in sh[2]: c.font=Font(bold=True); c.alignment=Alignment(horizontal="center")
+        for col in range(1,sh.max_column+1):
+            letter=get_column_letter(col)
+            sh.column_dimensions[letter].width=min(max(max(len(str(c.value or "")) for c in sh[letter])+3,12),32)
+    b=BytesIO(); wb.save(b); b.seek(0); return b
+
+@app.get('/sales/export')
+def sales_export(date: Optional[str]=None):
+    target=date or datetime.now(TAIPEI_TZ).strftime('%Y-%m-%d')
+    return StreamingResponse(build_sales_excel(target),
+      media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      headers={"Content-Disposition":f'attachment; filename="{target}_sales.xlsx"'})
 
 # V2.2：後台獨立網址 aliases
 @app.get('/admin/members', response_class=HTMLResponse)
@@ -892,6 +929,9 @@ def admin_sales_page(request:Request, date: Optional[str] = None):
 def admin_prep_page(request:Request, date: Optional[str]=None):
     return prep_page(request, date)
 
+@app.get('/admin/settings', response_class=HTMLResponse)
+def admin_settings_page(request:Request):
+    return settings_page(request)
 @app.get('/admin/settings', response_class=HTMLResponse)
 def admin_settings_page(request:Request):
     return settings_page(request)
