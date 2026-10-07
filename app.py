@@ -124,6 +124,34 @@ def license_api(path, license_key):
         return {"valid": False, "reason": "unexpected_error",
                 "detail": f"{type(e).__name__}: {e}"}
 
+def license_admin_info():
+    """取得後台顯示用授權資訊；優先向授權伺服器驗證，失敗時保留本機快取資料。"""
+    local = load_local_license()
+    key = (local.get("license_key") or "").strip()
+    if not key:
+        return {
+            "valid": False,
+            "reason": "not_activated",
+            "status_text": "尚未啟用",
+            "license_key_masked": "-"
+        }
+
+    remote = license_api("/api/v1/verify", key)
+    data = {**local}
+    if isinstance(remote, dict):
+        data.update(remote)
+    data["license_key"] = key
+
+    # 不在後台完整顯示金鑰
+    if len(key) >= 8:
+        data["license_key_masked"] = key[:4] + "-****-****-" + key[-4:]
+    else:
+        data["license_key_masked"] = "****"
+
+    data["status_text"] = "已啟用" if data.get("valid") else "授權異常"
+    return data
+
+
 def license_status():
     local = load_local_license()
     key = (local.get("license_key") or "").strip()
@@ -552,6 +580,16 @@ def portal(request: Request):
 @app.get('/admin', response_class=HTMLResponse)
 def admin_home(request: Request):
     return templates.TemplateResponse(request, 'portal.html', {'config':CONFIG})
+
+@app.get('/admin/license', response_class=HTMLResponse)
+def admin_license_page(request: Request):
+    info = license_admin_info()
+    return templates.TemplateResponse(
+        request,
+        'admin_license.html',
+        {'config': CONFIG, 'license': info}
+    )
+
 
 @app.get('/admin/tables', response_class=HTMLResponse)
 def home(request: Request, error: str = '', message: str = ''):
