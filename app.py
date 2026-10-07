@@ -1141,11 +1141,35 @@ def build_sales_excel(target_date: str):
     b=BytesIO(); wb.save(b); b.seek(0); return b
 
 @app.get('/sales/export')
+@app.get('/admin/sales/export')
 def sales_export(date: Optional[str]=None):
-    target=date or datetime.now(TAIPEI_TZ).strftime('%Y-%m-%d')
-    return StreamingResponse(build_sales_excel(target),
-      media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      headers={"Content-Disposition":f'attachment; filename="{target}_sales.xlsx"'})
+    target = date or datetime.now(TAIPEI_TZ).strftime('%Y-%m-%d')
+    try:
+        excel_file = build_sales_excel(target)
+        return StreamingResponse(
+            excel_file,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={
+                "Content-Disposition": f'attachment; filename="sales_{target}.xlsx"',
+                "Cache-Control": "no-store",
+            },
+        )
+    except Exception as e:
+        import html
+        error_type = html.escape(type(e).__name__)
+        error_text = html.escape(str(e))
+        return HTMLResponse(
+            f'''<!doctype html>
+<html lang="zh-Hant">
+<head><meta charset="utf-8"><title>Excel 匯出錯誤</title></head>
+<body style="font-family:Arial,'Microsoft JhengHei';padding:30px;">
+<h2>Excel 匯出失敗</h2>
+<p><b>錯誤類型：</b>{error_type}</p>
+<p><b>錯誤內容：</b>{error_text}</p>
+<p><a href="/admin/sales?date={target}">← 返回銷售統計</a></p>
+</body></html>''',
+            status_code=500,
+        )
 
 # V2.2：後台獨立網址 aliases
 @app.get('/admin/members', response_class=HTMLResponse)
@@ -1167,7 +1191,5 @@ def admin_prep_page(request:Request, date: Optional[str]=None):
 @app.get('/admin/settings', response_class=HTMLResponse)
 def admin_settings_page(request:Request):
     return settings_page(request)
-@app.get('/admin/settings', response_class=HTMLResponse)
-def admin_settings_page(request:Request):
-    return settings_page(request)
+
 
