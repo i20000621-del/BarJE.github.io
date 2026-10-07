@@ -67,7 +67,7 @@ def role_allowed(role: str, path: str) -> bool:
 
 # ===== POS cloud license =====
 LICENSE_SERVER_URL = os.getenv("LICENSE_SERVER_URL", "").rstrip("/")
-LICENSE_FILE = Path(os.getenv("LICENSE_FILE", "pos_license.json"))
+LICENSE_FILE = Path(os.getenv("LICENSE_FILE", "/tmp/pos_license.json" if os.getenv("RENDER") else "pos_license.json"))
 
 def load_local_license():
     try:
@@ -82,18 +82,45 @@ def save_local_license(data):
 
 def license_api(path, license_key):
     if not LICENSE_SERVER_URL:
-        return {"valid": False, "reason": "server_not_configured"}
+        return {"valid": False, "reason": "server_not_configured",
+                "detail": "Render 尚未設定 LICENSE_SERVER_URL"}
+
+    url = LICENSE_SERVER_URL.rstrip("/") + path
     req = urllib.request.Request(
-        LICENSE_SERVER_URL + path,
+        url,
         data=json.dumps({"license_key": license_key}).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
+        headers={
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "User-Agent": "QR-POS-License-Client/1.1",
+        },
         method="POST",
     )
+
     try:
-        with urllib.request.urlopen(req, timeout=10) as r:
-            return json.loads(r.read().decode("utf-8"))
-    except Exception:
-        return {"valid": False, "reason": "server_unreachable"}
+        with urllib.request.urlopen(req, timeout=20) as r:
+            raw = r.read().decode("utf-8", errors="replace")
+            try:
+                return json.loads(raw)
+            except Exception:
+                return {"valid": False, "reason": "invalid_response",
+                        "detail": "授權伺服器回傳不是 JSON：" + raw[:300]}
+
+    except urllib.error.HTTPError as e:
+        try:
+            raw = e.read().decode("utf-8", errors="replace")
+        except Exception:
+            raw = ""
+        return {"valid": False, "reason": "http_error",
+                "detail": f"授權伺服器 HTTP {e.code}：{raw[:300]}"}
+
+    except urllib.error.URLError as e:
+        return {"valid": False, "reason": "connection_error",
+                "detail": f"無法連線授權伺服器：{e.reason}"}
+
+    except Exception as e:
+        return {"valid": False, "reason": "unexpected_error",
+                "detail": f"{type(e).__name__}: {e}"}
 
 def license_status():
     local = load_local_license()
@@ -117,24 +144,49 @@ def license_page(request: Request):
 
 @app.post('/license/activate', response_class=HTMLResponse)
 def license_activate(request: Request, license_key: str = Form(...)):
-    key = license_key.strip().upper()
-    result = license_api("/api/v1/activate", key)
-    if result.get("valid"):
-        save_local_license({"license_key": key, **result})
-        return RedirectResponse('/', status_code=303)
-    messages = {
-        "invalid_key": "授權金鑰不存在。",
-        "disabled": "此授權已被停用。",
-        "expired": "此授權已到期。",
-        "server_unreachable": "目前無法連線授權伺服器。",
-        "server_not_configured": "尚未設定 LICENSE_SERVER_URL。",
-    }
-    return templates.TemplateResponse(
-        request, 'license.html',
-        {'config': CONFIG, 'license': load_local_license(),
-         'error': messages.get(result.get("reason"), "授權驗證失敗。")},
-        status_code=400
-    )
+    try:
+        key = (license_key or "").strip().upper()
+        result = license_api("/api/v1/activate", key)
+
+        if result.get("valid"):
+            try:
+                save_local_license({"license_key": key, **result})
+            except Exception as e:
+                return templates.TemplateResponse(
+                    request, 'license.html',
+                    {'config': CONFIG, 'license': load_local_license(),
+                     'error': f"授權驗證成功，但儲存授權資料失敗：{type(e).__name__}: {e}"},
+                    status_code=500
+                )
+            return RedirectResponse('/', status_code=303)
+
+        messages = {
+            "invalid_key": "授權金鑰不存在。",
+            "disabled": "此授權已被停用。",
+            "expired": "此授權已到期。",
+            "server_not_configured": "尚未設定 LICENSE_SERVER_URL。",
+            "http_error": "授權伺服器回傳 HTTP 錯誤。",
+            "connection_error": "無法連線授權伺服器。",
+            "invalid_response": "授權伺服器回傳格式錯誤。",
+            "unexpected_error": "授權驗證發生未預期錯誤。",
+        }
+        msg = messages.get(result.get("reason"), "授權驗證失敗。")
+        if result.get("detail"):
+            msg += " " + str(result["detail"])
+
+        return templates.TemplateResponse(
+            request, 'license.html',
+            {'config': CONFIG, 'license': load_local_license(), 'error': msg},
+            status_code=400
+        )
+
+    except Exception as e:
+        return templates.TemplateResponse(
+            request, 'license.html',
+            {'config': CONFIG, 'license': load_local_license(),
+             'error': f"POS 授權處理錯誤：{type(e).__name__}: {e}"},
+            status_code=500
+        )
 
 @app.middleware('http')
 async def role_guard(request: Request, call_next):
