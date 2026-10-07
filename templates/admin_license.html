@@ -1,0 +1,51 @@
+{% extends 'base_admin.html' %}
+{% block body %}
+<h2>軟體授權資訊</h2>
+<p class="muted">此頁顯示目前 POS 系統的授權狀態與授權期限。</p>
+
+<div class="card" style="max-width:760px;">
+  <table>
+    <tr>
+      <th style="width:180px;">項目</th>
+      <th>內容</th>
+    </tr>
+    <tr>
+      <td>授權狀態</td>
+      <td>
+        {% if license.valid %}
+          <b style="color:#16803c;">已啟用</b>
+        {% else %}
+          <b style="color:#b42318;">{{ license.status_text or '授權異常' }}</b>
+        {% endif %}
+      </td>
+    </tr>
+    <tr><td>客戶名稱</td><td>{{ license.customer_name or '-' }}</td></tr>
+    <tr><td>授權方案</td><td>{{ license.plan or '-' }}</td></tr>
+    <tr><td>授權金鑰</td><td><code>{{ license.license_key_masked or '-' }}</code></td></tr>
+    <tr>
+      <td>啟用時間</td>
+      <td>{{ license.activated_at or license.activation_time or license.activated_date or '-' }}</td>
+    </tr>
+    <tr>
+      <td>到期時間</td>
+      <td>{{ license.expires_at or license.expire_at or license.expiry_date or license.expires_on or '-' }}</td>
+    </tr>
+    <tr>
+      <td>剩餘天數</td>
+      <td>
+        {% if license.remaining_days is defined and license.remaining_days is not none %}
+          {{ license.remaining_days }} 天
+        {% elif license.days_left is defined and license.days_left is not none %}
+          {{ license.days_left }} 天
+        {% else %}
+          -
+        {% endif %}
+      </td>
+    </tr>
+  </table>
+
+  {% if license.detail %}
+  <div class="alert danger" style="margin-top:18px;">{{ license.detail }}</div>
+  {% endif %}
+</div>
+{% endblock %}
